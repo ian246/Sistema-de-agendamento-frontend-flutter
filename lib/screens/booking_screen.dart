@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../mock_data.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/theme.dart';
+import '../models/barber_models.dart';
+import '../services/api_service.dart';
 
 class BookingScreen extends StatefulWidget {
   final Barber barber;
@@ -11,8 +13,14 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
+  final ApiService api = ApiService();
+
   DateTime _selectedDay = DateTime.now();
   String? _selectedTime;
+  bool _isLoading = false;
+
+  final String myClientId = dotenv.env['TEST_CLIENT_ID'] ?? '';
+  final String myServiceId = dotenv.env['TEST_SERVICE_ID'] ?? '';
 
   final List<String> _timeSlots = [
     "09:00",
@@ -25,13 +33,42 @@ class _BookingScreenState extends State<BookingScreen> {
     "18:00",
   ];
 
+  void _submitBooking() async {
+    if (_selectedTime == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await api.createAppointment(
+        providerId: widget.barber.id,
+        serviceId: myServiceId,
+        date: _selectedDay,
+        time: _selectedTime!,
+      );
+
+      if (mounted) {
+        Navigator.pop(context, {'booked': true, 'time': _selectedTime});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro: ${e.toString().replaceAll("Exception:", "")}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Marcar Horário")),
       body: Column(
         children: [
-          // Resumo do Barbeiro
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -42,7 +79,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   radius: 40,
                   backgroundColor: AppColors.gold,
                   child: Text(
-                    widget.barber.name[0],
+                    widget.barber.name.isNotEmpty ? widget.barber.name[0] : "?",
                     style: const TextStyle(
                       fontSize: 24,
                       color: AppColors.charcoal,
@@ -67,14 +104,13 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
 
           Expanded(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título Data
                   const Text(
-                    "Selecione o Data",
+                    "Selecione a Data",
                     style: TextStyle(
                       color: AppColors.gold,
                       fontSize: 18,
@@ -82,8 +118,6 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Botão Fake de Data (Pode usar showDatePicker aqui)
                   InkWell(
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -132,6 +166,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
 
                   const SizedBox(height: 24),
+
                   const Text(
                     "Horários Disponíveis",
                     style: TextStyle(
@@ -141,8 +176,6 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Grid de Horários
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
@@ -167,43 +200,53 @@ class _BookingScreenState extends State<BookingScreen> {
                       );
                     }).toList(),
                   ),
-
-                  const Spacer(),
-
-                  // Preço e Botão
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Total:", style: TextStyle(color: AppColors.grey)),
-                      Text(
-                        "R\$45,00",
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _selectedTime == null
-                          ? null
-                          : () {
-                              // RETORNA OS DADOS PARA A HOME
-                              Navigator.pop(context, {
-                                'booked': true,
-                                'time': _selectedTime,
-                              });
-                            },
-                      child: const Text("CONFIRMAR AGENDAMENTO"),
-                    ),
-                  ),
                 ],
               ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total Estimado:",
+                      style: TextStyle(color: AppColors.grey),
+                    ),
+                    Text(
+                      "R\$ 45,00",
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_selectedTime == null || _isLoading)
+                        ? null
+                        : _submitBooking,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.charcoal,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text("CONFIRMAR AGENDAMENTO"),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

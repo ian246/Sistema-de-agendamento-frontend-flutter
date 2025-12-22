@@ -47,7 +47,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.gold,
-          foregroundColor: AppColors.charcoal, // Texto preto no botão dourado
+          foregroundColor: AppColors.charcoal,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

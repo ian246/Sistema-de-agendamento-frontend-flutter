@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import '../utils/theme.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -10,14 +10,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Simulando estado de edição
   bool _isEditingEmail = false;
   final TextEditingController _emailController = TextEditingController(
     text: "ian@flutter.dev",
   );
 
   void _handleLogout() {
-    // Limpa a pilha de navegação e vai para o Login
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -35,12 +33,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // --- Foto de Perfil com Botão de Edição ---
             Center(
               child: Stack(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(4), // Borda dourada
+                    padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.gold,
@@ -53,7 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         size: 80,
                         color: AppColors.grey,
                       ),
-                      // Futuramente aqui entra: backgroundImage: NetworkImage(...)
                     ),
                   ),
                   Positioned(
@@ -85,7 +81,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 40),
 
-            // --- Informações do Usuário ---
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -120,7 +115,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 60),
 
-            // --- Botão de Sair ---
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(

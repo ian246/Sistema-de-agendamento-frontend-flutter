@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'theme.dart';
+import 'utils/theme.dart';
 import 'screens/login_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -14,7 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Corte & Estilo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme, // Aplica o tema criado
+      theme: AppTheme.darkTheme,
       home: const LoginScreen(),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import '../utils/theme.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -14,7 +14,6 @@ class LoginScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Simulação do Logo
             Icon(Icons.content_cut, size: 80, color: AppColors.gold),
             const SizedBox(height: 16),
             const Text(
@@ -29,7 +28,6 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 48),
 
-            // Campos
             TextFormField(
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.email_outlined),
@@ -46,10 +44,8 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Botão Login
             ElevatedButton(
               onPressed: () {
-                // Navega removendo a rota anterior (não volta pro login)
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const HomeScreen()),

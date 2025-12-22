@@ -1,19 +1,36 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../mock_data.dart';
+import '../utils/theme.dart';
+import '../models/appointment_models.dart';
+import '../services/api_service.dart';
 import '../widgets/appointment_card.dart';
 
-class AppointmentsScreen extends StatelessWidget {
+class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Filtrando as listas
-    final activeAppointments = mockAppointments
-        .where((a) => !a.isPast)
-        .toList();
-    final pastAppointments = mockAppointments.where((a) => a.isPast).toList();
+  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+}
 
+class _AppointmentsScreenState extends State<AppointmentsScreen> {
+  final ApiService api = ApiService();
+  late Future<List<Appointment>> _appointmentsFuture;
+
+  final String myClientId = "0a93bc57-65b6-4810-a7df-fdc22044ab62";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  void _loadAppointments() {
+    setState(() {
+      _appointmentsFuture = api.getMyAppointments(myClientId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -29,13 +46,36 @@ class AppointmentsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Aba de Ativos
-            _buildList(activeAppointments, "Nenhum agendamento ativo."),
-            // Aba de Histórico
-            _buildList(pastAppointments, "Nenhum histórico encontrado."),
-          ],
+        body: FutureBuilder<List<Appointment>>(
+          future: _appointmentsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.gold),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  "Erro: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              );
+            }
+
+            final list = snapshot.data ?? [];
+
+            final active = list.where((a) => !a.isPast).toList();
+            final past = list.where((a) => a.isPast).toList();
+
+            return TabBarView(
+              children: [
+                _buildList(active, "Você não tem agendamentos futuros."),
+                _buildList(past, "Histórico vazio."),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -44,23 +84,14 @@ class AppointmentsScreen extends StatelessWidget {
   Widget _buildList(List<Appointment> list, String emptyMsg) {
     if (list.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.event_busy, size: 60, color: AppColors.grey),
-            const SizedBox(height: 16),
-            Text(emptyMsg, style: const TextStyle(color: AppColors.grey)),
-          ],
-        ),
+        child: Text(emptyMsg, style: const TextStyle(color: Colors.grey)),
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: list.length,
-      itemBuilder: (context, index) {
-        return AppointmentCard(appointment: list[index]);
-      },
+      itemBuilder: (context, index) =>
+          AppointmentCard(appointment: list[index]),
     );
   }
 }

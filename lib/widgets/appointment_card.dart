@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../mock_data.dart';
+import 'package:front_flutter/models/appointment_models.dart';
+import '../utils/theme.dart';
 
 class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
@@ -9,7 +9,6 @@ class AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cores dinâmicas baseadas no status
     final statusColor = appointment.isPast ? AppColors.grey : AppColors.green;
     final statusText = appointment.isPast ? "Finalizado" : "Confirmado";
     final cardOpacity = appointment.isPast ? 0.6 : 1.0;
@@ -22,9 +21,7 @@ class AppointmentCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.cardDark,
           borderRadius: BorderRadius.circular(16),
-          border: Border(
-            left: BorderSide(color: statusColor, width: 4), // Indicador lateral
-          ),
+          border: Border(left: BorderSide(color: statusColor, width: 4)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
@@ -36,7 +33,6 @@ class AppointmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho: Nome e Status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -70,7 +66,6 @@ class AppointmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Informações principais
             _buildInfoRow(Icons.content_cut, appointment.service),
             const SizedBox(height: 8),
             _buildInfoRow(
@@ -82,7 +77,6 @@ class AppointmentCard extends StatelessWidget {
 
             const Divider(color: AppColors.grey, height: 24),
 
-            // Rodapé: Preço
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
