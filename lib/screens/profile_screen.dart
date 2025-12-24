@@ -40,11 +40,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.gold,
+                      color: AppColors.primary,
                     ),
                     child: const CircleAvatar(
                       radius: 60,
-                      backgroundColor: AppColors.cardDark,
+                      backgroundColor: AppColors.surface,
                       child: Icon(
                         Icons.person,
                         size: 80,
@@ -57,14 +57,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     right: 0,
                     child: Container(
                       decoration: const BoxDecoration(
-                        color: AppColors.gold,
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          color: AppColors.charcoal,
-                        ),
+                        icon: const Icon(Icons.camera_alt, color: Colors.black),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -85,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 "Email",
-                style: TextStyle(color: AppColors.gold, fontSize: 14),
+                style: TextStyle(color: AppColors.primary, fontSize: 14),
               ),
             ),
             const SizedBox(height: 8),
@@ -97,7 +94,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 suffixIcon: IconButton(
                   icon: Icon(
                     _isEditingEmail ? Icons.check : Icons.edit,
-                    color: _isEditingEmail ? AppColors.green : AppColors.gold,
+                    color: _isEditingEmail
+                        ? AppColors.primary
+                        : AppColors.primary,
                   ),
                   onPressed: () {
                     setState(() {

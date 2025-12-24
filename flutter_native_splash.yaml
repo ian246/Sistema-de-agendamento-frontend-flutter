@@ -1,0 +1,34 @@
+flutter_native_splash:
+  # Configurações principais
+  color: "#0A1628"
+  image: "assets/icon/app_icon.png"
+
+  # Plataformas
+  android: true
+  ios: true
+  web: false
+
+  # Tela cheia
+  fullscreen: true
+
+  # Modo escuro (opcional)
+  color_dark: "#0A1628"
+  image_dark: "assets/icon/app_icon.png"
+
+  # --- CRÍTICO PARA ANDROID 12+ (XIAOMI) ---
+  android_12:
+    # A cor de fundo do ícone (geralmente a mesma do fundo da tela)
+    icon_background_color: "#0A1628"
+    # A imagem do ícone (pode ser a mesma de cima)
+    image: "assets/icon/app_icon.png"
+  # -----------------------------------------
+
+  # Configurações do Android
+  android_gravity: center
+
+  # Configurações do iOS
+  ios_content_mode: center
+
+  # Informações adicionais
+  info_plist_files:
+    - 'ios/Runner/Info.plist'

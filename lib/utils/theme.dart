@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color charcoal = Color(0xFF1E1E1E); // Fundo
-  static const Color cardDark = Color(0xFF2C2C2C); // Cards
-  static const Color gold = Color(0xFFC5A059); // Primária/Acentos
-  static const Color green = Color(0xFF2ECC71); // Sucesso
-  static const Color white = Color(0xFFF5F5F5); // Texto
-  static const Color grey = Color(0xFF9E9E9E); // Texto secundário
+  static const Color background = Color(0xFF1F222B); // Dark Gunmetal
+  static const Color surface = Color(0xFF2A2D3A); // Lighter Dark
+  static const Color primary = Color(0xFF29E0A9); // Mint Green
+  static const Color white = Color(0xFFFFFFFF); // Text Primary
+  static const Color grey = Color(0xFFA0A3B1); // Text Secondary
+  static const Color error = Color(0xFFEF4444); // Red
 }
 
 class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.charcoal,
-      primaryColor: AppColors.gold,
-      colorScheme: ColorScheme.dark(
-        primary: AppColors.gold,
-        surface: AppColors.cardDark,
+      scaffoldBackgroundColor: AppColors.background,
+      primaryColor: AppColors.primary,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primary,
+        surface: AppColors.surface,
         onSurface: AppColors.white,
+        background: AppColors.background,
+        onBackground: AppColors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -29,31 +31,45 @@ class AppTheme {
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: AppColors.gold),
+        iconTheme: IconThemeData(color: AppColors.white),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.cardDark,
+        fillColor: AppColors.surface,
         hintStyle: const TextStyle(color: AppColors.grey),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.gold,
-          foregroundColor: AppColors.charcoal,
+          backgroundColor: AppColors.primary,
+          foregroundColor: const Color(0xFF000000), // Black text on Mint Green
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30), // Pill shape
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
           textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          elevation: 0,
         ),
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
       ),
     );
   }

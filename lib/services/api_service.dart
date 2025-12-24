@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:front_flutter/models/barber_models.dart';
 import 'package:flutter/foundation.dart';
-
+// Certifique-se de importar seus models corretos
+import '../models/barber_models.dart';
 import '../models/appointment_models.dart';
+import '../models/service_model.dart'; // <--- Importe o novo model
 
 class ApiService {
   static final String _baseUrl = kIsWeb
@@ -12,10 +13,10 @@ class ApiService {
 
   final Dio _dio = Dio(BaseOptions(baseUrl: _baseUrl));
 
+  // --- 1. BUSCAR BARBEIROS ---
   Future<List<Barber>> getBarbers() async {
     try {
       final response = await _dio.get('/profiles/providers');
-
       List<dynamic> data = response.data;
       return data.map((json) => Barber.fromJson(json)).toList();
     } catch (e) {
@@ -24,7 +25,22 @@ class ApiService {
     }
   }
 
+  // --- 2. BUSCAR SERVIÇOS (NOVO!) ---
+  Future<List<BarberService>> getServices() async {
+    try {
+      final response = await _dio.get(
+        '/services',
+      ); // Chama sua rota GET /services
+      List<dynamic> data = response.data;
+      return data.map((json) => BarberService.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception("Erro ao buscar serviços: $e");
+    }
+  }
+
+  // --- 3. CRIAR AGENDAMENTO (Atualizado com clientId dinâmico) ---
   Future<Map<String, dynamic>> createAppointment({
+    required String clientId, // <--- Agora pedimos o ID do cliente
     required String providerId,
     required String serviceId,
     required DateTime date,
@@ -46,7 +62,7 @@ class ApiService {
       final response = await _dio.post(
         '/appointments',
         data: {
-          "client_id": "0a93bc57-65b6-4810-a7df-fdc22044ab62",
+          "client_id": clientId, // <--- Usa o ID real, não o fixo
           "provider_id": providerId,
           "service_id": serviceId,
           "start_time": fullDateTime.toIso8601String(),
@@ -62,6 +78,7 @@ class ApiService {
     }
   }
 
+  // --- 4. MEUS AGENDAMENTOS ---
   Future<List<Appointment>> getMyAppointments(String clientId) async {
     try {
       final response = await _dio.get('/appointments/client/$clientId');
@@ -69,6 +86,28 @@ class ApiService {
       return data.map((json) => Appointment.fromJson(json)).toList();
     } catch (e) {
       throw Exception("Erro: $e");
+    }
+  }
+
+  // --- 5. CRIAR SERVIÇO ---
+  Future<void> createService({
+    required String title,
+    required String description,
+    required double price,
+    required int duration,
+  }) async {
+    try {
+      await _dio.post(
+        '/services',
+        data: {
+          "title": title,
+          "description": description,
+          "price": price,
+          "duration": duration,
+        },
+      );
+    } catch (e) {
+      throw Exception("Erro ao criar serviço: $e");
     }
   }
 }

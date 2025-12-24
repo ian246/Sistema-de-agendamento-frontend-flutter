@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/theme.dart';
 import '../models/appointment_models.dart';
 import '../services/api_service.dart';
@@ -15,7 +16,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   final ApiService api = ApiService();
   late Future<List<Appointment>> _appointmentsFuture;
 
-  final String myClientId = "0a93bc57-65b6-4810-a7df-fdc22044ab62";
+  final String myClientId = Supabase.instance.client.auth.currentUser?.id ?? '';
 
   @override
   void initState() {
@@ -37,8 +38,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         appBar: AppBar(
           title: const Text("Meus Agendamentos"),
           bottom: const TabBar(
-            indicatorColor: AppColors.gold,
-            labelColor: AppColors.gold,
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.grey,
             tabs: [
               Tab(text: "Ativos"),
@@ -51,7 +52,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: AppColors.gold),
+                child: CircularProgressIndicator(color: AppColors.primary),
               );
             }
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/theme.dart';
 import '../models/barber_models.dart';
 import '../services/api_service.dart';
 import 'booking_screen.dart';
 import 'login_screen.dart';
-import 'profile_screen.dart';
 import 'appointments_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Agendamento solicitado para ${result['time']}!"),
-          backgroundColor: AppColors.green,
+          backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: AppColors.gold),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -98,102 +98,170 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             itemCount: barbers.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final barber = barbers[index];
 
-              return InkWell(
-                onTap: () => _goToBooking(barber),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardDark,
-                    borderRadius: BorderRadius.circular(16),
-
-                    border: barber.isBooked
-                        ? Border.all(color: AppColors.green, width: 2)
-                        : Border.all(color: Colors.transparent),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _goToBooking(barber),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: barber.isBooked
+                          ? LinearGradient(
+                              colors: [
+                                AppColors.surface,
+                                AppColors.primary.withOpacity(0.1),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: barber.isBooked ? null : AppColors.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: barber.isBooked
+                            ? AppColors.primary
+                            : AppColors.grey.withOpacity(0.1),
+                        width: 2,
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: AppColors.gold.withOpacity(0.2),
-                        child: Text(
-                          barber.name.isNotEmpty ? barber.name[0] : "?",
-                          style: const TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: barber.isBooked
+                              ? AppColors.primary.withOpacity(0.2)
+                              : Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              barber.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              barber.specialty,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (barber.isBooked)
+                      ],
+                    ),
+                    child: Row(
+                      children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
-                            color: AppColors.green.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            shape: BoxShape.circle,
+                            gradient: barber.isBooked
+                                ? const LinearGradient(
+                                    colors: [
+                                      AppColors.primary,
+                                      Color(0xFF1FD89A),
+                                    ],
+                                  )
+                                : null,
+                            color: barber.isBooked
+                                ? null
+                                : AppColors.primary.withOpacity(0.2),
                           ),
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.check_circle,
-                                color: AppColors.green,
-                                size: 20,
+                          child: CircleAvatar(
+                            radius: 32,
+                            backgroundColor: AppColors.background,
+                            child: Text(
+                              barber.name.isNotEmpty ? barber.name[0] : "?",
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
                               ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                barber.bookedTime ?? "",
+                                barber.name,
                                 style: const TextStyle(
-                                  color: AppColors.green,
-                                  fontSize: 12,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
+                                  color: AppColors.white,
+                                  letterSpacing: 0.5,
                                 ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.content_cut,
+                                    size: 14,
+                                    color: AppColors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    barber.specialty,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        )
-                      else
-                        const Icon(Icons.chevron_right, color: AppColors.gold),
-                    ],
+                        ),
+
+                        if (barber.isBooked)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.primary, Color(0xFF1FD89A)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.black,
+                                  size: 20,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  barber.bookedTime ?? "",
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_ios,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -205,35 +273,56 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _CustomDrawer extends StatelessWidget {
+class _CustomDrawer extends StatefulWidget {
   const _CustomDrawer();
 
   @override
+  State<_CustomDrawer> createState() => _CustomDrawerState();
+}
+
+class _CustomDrawerState extends State<_CustomDrawer> {
+  // Pega os dados do usuário logado na memória do celular
+  final user = Supabase.instance.client.auth.currentUser;
+
+  @override
   Widget build(BuildContext context) {
+    // Tenta pegar o nome salvo no cadastro. Se não tiver, usa "Cliente"
+    final String name = user?.userMetadata?['full_name'] ?? "Cliente";
+    final String email = user?.email ?? "Email não disponível";
+
+    // Pega a primeira letra do nome para o avatar (ex: "G" de Gabi)
+    final String initial = name.isNotEmpty ? name[0].toUpperCase() : "?";
+
     return Drawer(
-      backgroundColor: AppColors.charcoal,
+      backgroundColor: AppColors.surface,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: AppColors.cardDark),
-            accountName: const Text(
-              "Ian Developer",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            decoration: const BoxDecoration(color: AppColors.surface),
+            // AQUI ESTÁ A MUDANÇA: Usamos as variáveis name e email
+            accountName: Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            accountEmail: const Text(
-              "ian@flutter.dev",
-              style: TextStyle(color: AppColors.grey),
+            accountEmail: Text(
+              email,
+              style: const TextStyle(color: AppColors.grey),
             ),
             currentAccountPicture: CircleAvatar(
-              backgroundColor: AppColors.gold,
-              child: const Icon(
-                Icons.person,
-                color: AppColors.charcoal,
-                size: 40,
+              backgroundColor: AppColors.primary,
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
             ),
           ),
+
+          // --- Itens do Menu (Mantive igual ao seu) ---
           ListTile(
             leading: const Icon(Icons.person_outline, color: AppColors.white),
             title: const Text(
@@ -241,11 +330,8 @@ class _CustomDrawer extends StatelessWidget {
               style: TextStyle(color: AppColors.white),
             ),
             onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
+              Navigator.pop(context); // Fecha o drawer
+              // Adicione a navegação para ProfileScreen se tiver
             },
           ),
           ListTile(
@@ -264,19 +350,28 @@ class _CustomDrawer extends StatelessWidget {
               );
             },
           ),
+
           const Divider(color: AppColors.grey),
+
+          // BOTÃO SAIR (LOGOUT)
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text(
               "Sair",
               style: TextStyle(color: Colors.redAccent),
             ),
-            onTap: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
+            onTap: () async {
+              // 1. Desloga do Supabase
+              await Supabase.instance.client.auth.signOut();
+
+              // 2. Volta para a tela de Login e remove o histórico de telas
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
           ),
         ],
