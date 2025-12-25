@@ -7,11 +7,34 @@ import '../models/appointment_models.dart';
 import '../models/service_model.dart'; // <--- Importe o novo model
 
 class ApiService {
-  static final String _baseUrl = kIsWeb
-      ? dotenv.env['API_URL_WEB'] ?? 'http://localhost:3000/api'
-      : dotenv.env['API_URL_ANDROID'] ?? 'http://10.0.2.2:3000/api';
+  static String get _baseUrl {
+    final url = kIsWeb
+        ? dotenv.env['API_URL_WEB']
+        : dotenv.env['API_URL_ANDROID'];
 
-  final Dio _dio = Dio(BaseOptions(baseUrl: _baseUrl));
+    if (url == null || url.isEmpty) {
+      throw Exception('URL da API não configurada! Verifique o arquivo .env');
+    }
+
+    // Valida se a URL tem o protocolo
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      throw Exception(
+        'URL da API inválida: "$url". Deve começar com http:// ou https://',
+      );
+    }
+
+    return url;
+  }
+
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: _baseUrl,
+      connectTimeout: const Duration(
+        seconds: 60,
+      ), // Aumentado para Render free tier
+      receiveTimeout: const Duration(seconds: 60),
+    ),
+  );
 
   // --- 1. BUSCAR BARBEIROS ---
   Future<List<Barber>> getBarbers() async {
@@ -19,9 +42,45 @@ class ApiService {
       final response = await _dio.get('/profiles/providers');
       List<dynamic> data = response.data;
       return data.map((json) => Barber.fromJson(json)).toList();
-    } catch (e) {
+    } on DioException catch (e) {
       print("Erro ao buscar barbeiros: $e");
-      throw Exception("Falha na conexão com o servidor");
+
+      // Mensagens de erro mais específicas
+      if (e.type == DioExceptionType.connectionTimeout) {
+        throw Exception(
+          "Tempo de conexão esgotado.\n\n"
+          "Se o servidor está no Render (plano gratuito),\n"
+          "pode levar até 60s para acordar.\n"
+          "Tente novamente em alguns segundos.",
+        );
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        throw Exception(
+          "Servidor demorou muito para responder.\nTente novamente.",
+        );
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception(
+          "Não foi possível conectar ao servidor.\n\n"
+          "Verifique:\n"
+          "• O backend está rodando?\n"
+          "• A URL está correta? ($_baseUrl)\n"
+          "• Você está conectado à internet?",
+        );
+      } else if (e.response?.statusCode == 404) {
+        throw Exception(
+          "Endpoint não encontrado.\nVerifique se a rota /profiles/providers existe no backend.",
+        );
+      } else if (e.response?.statusCode == 500) {
+        throw Exception(
+          "Erro interno do servidor.\nVerifique os logs do backend.",
+        );
+      } else {
+        throw Exception(
+          "Erro ao conectar com o servidor.\n${e.message ?? 'Erro desconhecido'}",
+        );
+      }
+    } catch (e) {
+      print("Erro inesperado ao buscar barbeiros: $e");
+      throw Exception("Erro inesperado: $e");
     }
   }
 

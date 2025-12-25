@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/theme.dart';
 import '../models/barber_models.dart';
@@ -61,28 +62,80 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           if (snapshot.hasError) {
+            final errorMessage = snapshot.error.toString().replaceFirst(
+              'Exception: ',
+              '',
+            );
+
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Erro ao carregar barbeiros.\nVerifique se o servidor está rodando.",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "${snapshot.error}",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: _loadBarbers,
-                    child: const Text("Tentar Novamente"),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.cloud_off_outlined,
+                        color: Colors.red,
+                        size: 64,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      "Erro de Conexão",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.grey,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _loadBarbers,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text("Tentar Novamente"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -361,10 +414,14 @@ class _CustomDrawerState extends State<_CustomDrawer> {
               style: TextStyle(color: Colors.redAccent),
             ),
             onTap: () async {
-              // 1. Desloga do Supabase
-              await Supabase.instance.client.auth.signOut();
+              // MUDANÇA AQUI:
+              // Antes: await Supabase.instance.client.auth.signOut();
 
-              // 2. Volta para a tela de Login e remove o histórico de telas
+              // Agora: Usamos o AuthService para limpar o token da memória
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('accessToken');
+
+              // Volta para a tela de Login e remove o histórico
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,

@@ -5,7 +5,6 @@ import 'package:Bcorte/utils/app_constants.dart';
 import 'package:Bcorte/utils/theme.dart';
 import 'package:Bcorte/widgets/custom_text_field.dart';
 import 'package:Bcorte/widgets/primary_button.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,22 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erro: ${e.message}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
+        final errorMessage = e.toString().replaceAll('Exception: ', '');
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppConstants.unexpectedError),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
       }
     } finally {
