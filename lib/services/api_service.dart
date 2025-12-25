@@ -39,7 +39,7 @@ class ApiService {
   // --- 1. BUSCAR BARBEIROS ---
   Future<List<Barber>> getBarbers() async {
     try {
-      final response = await _dio.get('/profiles/providers');
+      final response = await _dio.get('/api/profiles/providers');
       List<dynamic> data = response.data;
       return data.map((json) => Barber.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -88,7 +88,7 @@ class ApiService {
   Future<List<BarberService>> getServices() async {
     try {
       final response = await _dio.get(
-        '/services',
+        '/api/services',
       ); // Chama sua rota GET /services
       List<dynamic> data = response.data;
       return data.map((json) => BarberService.fromJson(json)).toList();
@@ -119,7 +119,7 @@ class ApiService {
       );
 
       final response = await _dio.post(
-        '/appointments',
+        '/api/appointments',
         data: {
           "client_id": clientId, // <--- Usa o ID real, não o fixo
           "provider_id": providerId,
@@ -140,7 +140,7 @@ class ApiService {
   // --- 4. MEUS AGENDAMENTOS ---
   Future<List<Appointment>> getMyAppointments(String clientId) async {
     try {
-      final response = await _dio.get('/appointments/client/$clientId');
+      final response = await _dio.get('/api/appointments/client/$clientId');
       List<dynamic> data = response.data;
       return data.map((json) => Appointment.fromJson(json)).toList();
     } catch (e) {
@@ -157,7 +157,7 @@ class ApiService {
   }) async {
     try {
       await _dio.post(
-        '/services',
+        '/api/services',
         data: {
           "title": title,
           "description": description,

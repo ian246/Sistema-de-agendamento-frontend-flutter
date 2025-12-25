@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/theme.dart';
 import '../models/appointment_models.dart';
 import '../services/api_service.dart';
@@ -15,18 +15,30 @@ class AppointmentsScreen extends StatefulWidget {
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
   final ApiService api = ApiService();
   late Future<List<Appointment>> _appointmentsFuture;
-
-  final String myClientId = Supabase.instance.client.auth.currentUser?.id ?? '';
+  String? myClientId;
 
   @override
   void initState() {
     super.initState();
-    _loadAppointments();
+    _loadUserId();
+  }
+
+  // Carrega o userId do SharedPreferences
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    if (userId != null) {
+      setState(() {
+        myClientId = userId;
+      });
+      _loadAppointments();
+    }
   }
 
   void _loadAppointments() {
+    if (myClientId == null) return;
     setState(() {
-      _appointmentsFuture = api.getMyAppointments(myClientId);
+      _appointmentsFuture = api.getMyAppointments(myClientId!);
     });
   }
 

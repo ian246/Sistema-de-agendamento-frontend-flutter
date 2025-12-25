@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/theme.dart';
 import '../models/barber_models.dart';
 import '../models/service_model.dart';
@@ -70,7 +70,9 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
+      // Pega o userId salvo no login
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
       if (userId == null) throw Exception("Usuário não logado");
 
       await api.createAppointment(

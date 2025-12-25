@@ -42,9 +42,11 @@ class AuthService {
       if (response.statusCode == 200) {
         // Sucesso! Salva o token no celular
         final token = data['token'];
+        final userId = data['user']['id']; // Pega ID do usuário do backend
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', token);
-        // Opcional: Salvar dados do usuário como data['user']['name']
+        await prefs.setString('userId', userId); // Salva ID do usuário
       } else {
         // Erro vindo da API (Ex: Senha incorreta)
         throw Exception(data['error'] ?? 'Erro ao fazer login');
@@ -97,5 +99,6 @@ class AuthService {
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
+    await prefs.remove('userId'); // Remove também o ID do usuário
   }
 }
