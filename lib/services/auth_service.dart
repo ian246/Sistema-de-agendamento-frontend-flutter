@@ -40,13 +40,18 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Sucesso! Salva o token no celular
+        // Sucesso! Salva o token e dados do usuário no celular
         final token = data['token'];
-        final userId = data['user']['id']; // Pega ID do usuário do backend
+        final user = data['user'];
+        final userId = user['id'];
+        final email = user['email'] ?? '';
+        final name = user['name'] ?? '';
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', token);
-        await prefs.setString('userId', userId); // Salva ID do usuário
+        await prefs.setString('userId', userId);
+        await prefs.setString('userEmail', email);
+        await prefs.setString('userName', name);
       } else {
         // Erro vindo da API (Ex: Senha incorreta)
         throw Exception(data['error'] ?? 'Erro ao fazer login');
@@ -99,6 +104,18 @@ class AuthService {
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
-    await prefs.remove('userId'); // Remove também o ID do usuário
+    await prefs.remove('userId');
+    await prefs.remove('userEmail');
+    await prefs.remove('userName');
+  }
+
+  // --- OBTER DADOS DO USUÁRIO ---
+  Future<Map<String, String>> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'userId': prefs.getString('userId') ?? '',
+      'email': prefs.getString('userEmail') ?? 'Email não disponível',
+      'name': prefs.getString('userName') ?? 'Cliente',
+    };
   }
 }

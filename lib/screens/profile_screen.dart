@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/theme.dart';
+import '../services/auth_service.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -11,20 +13,48 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditingEmail = false;
-  final TextEditingController _emailController = TextEditingController(
-    text: "ian@flutter.dev",
-  );
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = true;
 
-  void _handleLogout() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _emailController.text =
+          prefs.getString('userEmail') ?? 'Email não disponível';
+      _nameController.text = prefs.getString('userName') ?? 'Cliente';
+      _isLoading = false;
+    });
+  }
+
+  void _handleLogout() async {
+    await _authService.signOut();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text("Meu Perfil")),
       body: SingleChildScrollView(
@@ -42,13 +72,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: BoxShape.circle,
                       color: AppColors.primary,
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 60,
                       backgroundColor: AppColors.surface,
-                      child: Icon(
-                        Icons.person,
-                        size: 80,
-                        color: AppColors.grey,
+                      child: Text(
+                        _nameController.text.isNotEmpty
+                            ? _nameController.text[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -65,7 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Abrir galeria/câmera..."),
+                              content: Text(
+                                "Funcionalidade em desenvolvimento...",
+                              ),
                             ),
                           );
                         },
@@ -81,6 +118,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
+                "Nome",
+                style: TextStyle(color: AppColors.primary, fontSize: 14),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameController,
+              readOnly: true,
+              style: const TextStyle(color: AppColors.white),
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
                 "Email",
                 style: TextStyle(color: AppColors.primary, fontSize: 14),
               ),
@@ -91,12 +152,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               readOnly: !_isEditingEmail,
               style: const TextStyle(color: AppColors.white),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide.none,
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _isEditingEmail ? Icons.check : Icons.edit,
-                    color: _isEditingEmail
-                        ? AppColors.primary
-                        : AppColors.primary,
+                    color: AppColors.primary,
                   ),
                   onPressed: () {
                     setState(() {
@@ -104,7 +169,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     });
                     if (!_isEditingEmail) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Email atualizado!")),
+                        const SnackBar(
+                          content: Text(
+                            "Funcionalidade de edição em desenvolvimento!",
+                          ),
+                        ),
                       );
                     }
                   },
@@ -139,5 +208,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nameController.dispose();
+    super.dispose();
   }
 }

@@ -42,6 +42,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         fullName: name,
       );
 
+      // Auto-login após cadastro
+      await _authService.signIn(email: email, password: password);
+
       if (mounted) {
         Navigator.pushReplacement(
           context,

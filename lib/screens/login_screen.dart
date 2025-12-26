@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Bcorte/screens/singup_screen.dart';
+import 'package:Bcorte/screens/signup_screen.dart';
 import 'package:Bcorte/services/auth_service.dart';
 import 'package:Bcorte/utils/app_constants.dart';
 import 'package:Bcorte/utils/theme.dart';

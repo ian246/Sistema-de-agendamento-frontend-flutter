@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/theme.dart';
 import '../models/barber_models.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import 'booking_screen.dart';
 import 'login_screen.dart';
 import 'appointments_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -334,17 +335,31 @@ class _CustomDrawer extends StatefulWidget {
 }
 
 class _CustomDrawerState extends State<_CustomDrawer> {
-  // Pega os dados do usuário logado na memória do celular
-  final user = Supabase.instance.client.auth.currentUser;
+  String _userName = 'Cliente';
+  String _userEmail = 'Email não disponível';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Cliente';
+      _userEmail = prefs.getString('userEmail') ?? 'Email não disponível';
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Tenta pegar o nome salvo no cadastro. Se não tiver, usa "Cliente"
-    final String name = user?.userMetadata?['full_name'] ?? "Cliente";
-    final String email = user?.email ?? "Email não disponível";
-
     // Pega a primeira letra do nome para o avatar (ex: "G" de Gabi)
-    final String initial = name.isNotEmpty ? name[0].toUpperCase() : "?";
+    final String initial = _userName.isNotEmpty
+        ? _userName[0].toUpperCase()
+        : "?";
 
     return Drawer(
       backgroundColor: AppColors.surface,
@@ -353,15 +368,21 @@ class _CustomDrawerState extends State<_CustomDrawer> {
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: AppColors.surface),
-            // AQUI ESTÁ A MUDANÇA: Usamos as variáveis name e email
-            accountName: Text(
-              name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            accountEmail: Text(
-              email,
-              style: const TextStyle(color: AppColors.grey),
-            ),
+            accountName: _isLoading
+                ? const Text('Carregando...')
+                : Text(
+                    _userName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+            accountEmail: _isLoading
+                ? const Text('...')
+                : Text(
+                    _userEmail,
+                    style: const TextStyle(color: AppColors.grey),
+                  ),
             currentAccountPicture: CircleAvatar(
               backgroundColor: AppColors.primary,
               child: Text(
@@ -375,7 +396,7 @@ class _CustomDrawerState extends State<_CustomDrawer> {
             ),
           ),
 
-          // --- Itens do Menu (Mantive igual ao seu) ---
+          // --- Itens do Menu ---
           ListTile(
             leading: const Icon(Icons.person_outline, color: AppColors.white),
             title: const Text(
@@ -384,7 +405,10 @@ class _CustomDrawerState extends State<_CustomDrawer> {
             ),
             onTap: () {
               Navigator.pop(context); // Fecha o drawer
-              // Adicione a navegação para ProfileScreen se tiver
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
             },
           ),
           ListTile(
@@ -414,12 +438,9 @@ class _CustomDrawerState extends State<_CustomDrawer> {
               style: TextStyle(color: Colors.redAccent),
             ),
             onTap: () async {
-              // MUDANÇA AQUI:
-              // Antes: await Supabase.instance.client.auth.signOut();
-
-              // Agora: Usamos o AuthService para limpar o token da memória
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('accessToken');
+              // Usa o AuthService para fazer logout completo
+              final authService = AuthService();
+              await authService.signOut();
 
               // Volta para a tela de Login e remove o histórico
               if (context.mounted) {
