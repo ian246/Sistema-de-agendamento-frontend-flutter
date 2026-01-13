@@ -41,12 +41,16 @@ class AuthService {
 
       if (response.statusCode == 200) {
         // Sucesso! Salva o token e dados do usuário no celular
+        print("Login Success: $data"); // DEBUG LOG
         final token = data['token'];
         final user = data['user'];
         final userId = user['id'];
         final email = user['email'] ?? '';
         final name = user['name'] ?? '';
+        // Role agora vem direto do login (backend atualizado)
         final role = user['role'] ?? 'client';
+
+        print("Role detectado: $role"); // DEBUG
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', token);
@@ -54,9 +58,6 @@ class AuthService {
         await prefs.setString('userEmail', email);
         await prefs.setString('userName', name);
         await prefs.setString('userRole', role);
-
-        // Se o role vier como client mas deveria ser provider, podemos forçar uma verificação extra aqui
-        // Mas por enquanto vamos confiar que o backend manda o role correto.
       } else {
         // Erro vindo da API (Ex: Senha incorreta)
         throw Exception(data['error'] ?? 'Erro ao fazer login');

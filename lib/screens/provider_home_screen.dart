@@ -16,11 +16,20 @@ class ProviderHomeScreen extends StatefulWidget {
 class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   final _providerService = ProviderService();
   late Future<List<ServiceModel>> _servicesFuture;
+  String _providerEmail = '';
 
   @override
   void initState() {
     super.initState();
+    _loadProviderInfo();
     _loadServices();
+  }
+
+  Future<void> _loadProviderInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _providerEmail = prefs.getString('userEmail') ?? '';
+    });
   }
 
   void _loadServices() {
@@ -78,7 +87,29 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
             return Center(child: Text('Erro: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhum serviço cadastrado.'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.work_off_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nenhum serviço cadastrado para\n$_providerEmail',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Clique no + para adicionar seu primeiro serviço!',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
           }
 
           final services = snapshot.data!;
@@ -96,7 +127,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                     child: Icon(Icons.content_cut, color: Colors.white),
                   ),
                   title: Text(
-                    service.name,
+                    service.title,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/barber_models.dart';
 import '../models/appointment_models.dart';
 import '../models/service_model.dart'; // <--- Importe o novo model
+import 'package:shared_preferences/shared_preferences.dart'; // Para pegar o token
 
 class ApiService {
   static String get _baseUrl {
@@ -85,24 +86,34 @@ class ApiService {
   }
 
   // --- 2. BUSCAR SERVIÇOS (NOVO!) ---
+  // --- 2. BUSCAR SERVIÇOS (CORRIGIDO) ---
   Future<List<ServiceModel>> getServices(String providerId) async {
     try {
-      // Ajuste se o seu backend esperar /api/services?provider_id=XYZ
-      // ou /api/services/provider/XYZ
-      // Baseado no ProviderService que usa /api/services/me,
-      // vou assumir que existe um filtro público ou endpoint específico.
-      // Se não houver, vamos tentar query param:
+      // Recuperar o token para autenticação
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+
+      // Configurar headers com o token
+      final options = Options(headers: {'Authorization': 'Bearer $token'});
+
+      // Endpoint correto: /api/services/provider/:providerId
       final response = await _dio.get(
-        '/api/services',
-        queryParameters: {'provider_id': providerId},
+        '/api/services/provider/$providerId',
+        options: options,
       );
 
       List<dynamic> data = response.data;
       return data.map((json) => ServiceModel.fromJson(json)).toList();
-    } catch (e) {
-      // Fallback: Se der 404, pode ser que a rota seja /api/services/provider/:id
-      // Mas vamos tentar logar o erro primeiro
+    } on DioException catch (e) {
       print("Erro getServices: $e");
+      if (e.response?.statusCode == 404) {
+        throw Exception(
+          "Nenhum serviço encontrado para este barbeiro/provider.",
+        );
+      }
+      throw Exception("Erro ao buscar serviços: ${e.message}");
+    } catch (e) {
+      print("Erro inesperado getServices: $e");
       throw Exception("Erro ao buscar serviços: $e");
     }
   }

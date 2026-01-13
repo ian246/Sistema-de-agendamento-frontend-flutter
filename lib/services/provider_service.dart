@@ -32,11 +32,20 @@ class ProviderService {
   Future<List<ServiceModel>> getMyServices() async {
     final headers = await _getHeaders();
     final url = baseUrl; // Ensure we handle the property access correctly
+    print("Buscando serviços: $url/me"); // DEBUG
+
     final response = await http.get(Uri.parse('$url/me'), headers: headers);
+
+    print(
+      "Response getMyServices: ${response.statusCode} - ${response.body}",
+    ); // DEBUG
 
     if (response.statusCode == 200) {
       final List<dynamic> body = jsonDecode(response.body);
       return body.map((e) => ServiceModel.fromJson(e)).toList();
+    } else if (response.statusCode == 404) {
+      // Nenhum serviço encontrado - retorna lista vazia
+      return [];
     } else {
       throw Exception('Erro ao buscar serviços: ${response.body}');
     }
@@ -46,11 +55,18 @@ class ProviderService {
   Future<void> createService(ServiceModel service) async {
     final headers = await _getHeaders();
     final url = baseUrl;
+    final payload = jsonEncode(service.toJson());
+    print("Criando serviço: $payload"); // DEBUG
+
     final response = await http.post(
       Uri.parse(url),
       headers: headers,
-      body: jsonEncode(service.toJson()),
+      body: payload,
     );
+
+    print(
+      "Response createService: ${response.statusCode} - ${response.body}",
+    ); // DEBUG
 
     if (response.statusCode != 201) {
       throw Exception('Erro ao criar serviço: ${response.body}');
@@ -65,6 +81,25 @@ class ProviderService {
 
     if (response.statusCode != 200) {
       throw Exception('Erro ao deletar serviço.');
+    }
+  }
+
+  // 4. Buscar Serviços de um Provider Específico (Para o Cliente)
+  Future<List<ServiceModel>> getServicesByProviderId(String providerId) async {
+    final headers = await _getHeaders();
+    final url = baseUrl; // Já contém '/api/services'
+
+    // A rota final será: .../api/services/provider/ID_DO_PROVIDER
+    final response = await http.get(
+      Uri.parse('$url/provider/$providerId'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> body = jsonDecode(response.body);
+      return body.map((e) => ServiceModel.fromJson(e)).toList();
+    } else {
+      throw Exception('Erro ao buscar serviços do barbeiro: ${response.body}');
     }
   }
 }

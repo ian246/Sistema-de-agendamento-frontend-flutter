@@ -306,7 +306,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   : null,
                                             ),
                                             child: Text(
-                                              "${service.name} - R\$ ${service.price}",
+                                              "${service.title} - R\$ ${service.price}",
                                               style: TextStyle(
                                                 color: isSelected
                                                     ? Colors.black

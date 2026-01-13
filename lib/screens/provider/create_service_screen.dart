@@ -26,7 +26,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     try {
       final newService = ServiceModel(
         id: '', // Backend gera
-        name: _nameController.text,
+        title: _nameController.text,
         price:
             double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0.0,
         duration: int.tryParse(_durationController.text) ?? 30,

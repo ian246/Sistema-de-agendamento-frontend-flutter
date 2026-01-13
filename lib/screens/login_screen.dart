@@ -34,7 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final role = prefs.getString('userRole') ?? 'client';
 
       if (mounted) {
-        if (role == 'provider') {
+        // DEBUG: Mostrar qual role foi detectada
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Role detectada: '$role'")));
+
+        if (role.toLowerCase() == 'provider') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const ProviderHomeScreen()),
