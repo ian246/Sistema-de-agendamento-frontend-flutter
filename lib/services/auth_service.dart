@@ -46,12 +46,17 @@ class AuthService {
         final userId = user['id'];
         final email = user['email'] ?? '';
         final name = user['name'] ?? '';
+        final role = user['role'] ?? 'client';
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', token);
         await prefs.setString('userId', userId);
         await prefs.setString('userEmail', email);
         await prefs.setString('userName', name);
+        await prefs.setString('userRole', role);
+
+        // Se o role vier como client mas deveria ser provider, podemos forçar uma verificação extra aqui
+        // Mas por enquanto vamos confiar que o backend manda o role correto.
       } else {
         // Erro vindo da API (Ex: Senha incorreta)
         throw Exception(data['error'] ?? 'Erro ao fazer login');
@@ -73,6 +78,8 @@ class AuthService {
     required String email,
     required String password,
     required String fullName,
+    required String role,
+    required String phone, // Novo campo
   }) async {
     final url = Uri.parse('$baseUrl/api/auth/register');
 
@@ -83,7 +90,9 @@ class AuthService {
         body: jsonEncode({
           'email': email,
           'password': password,
-          'name': fullName, // O backend espera 'name'
+          'name': fullName,
+          'role': role,
+          'phone': phone, // Enviando telefone
         }),
       );
 
@@ -91,7 +100,6 @@ class AuthService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         // Sucesso no cadastro
-        // Nota: Dependendo da sua lógica, talvez precise logar logo em seguida
       } else {
         throw Exception(data['error'] ?? 'Erro ao cadastrar');
       }

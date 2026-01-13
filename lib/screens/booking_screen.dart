@@ -16,8 +16,8 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   final ApiService api = ApiService();
 
-  List<BarberService> _services = [];
-  BarberService? _selectedService;
+  List<ServiceModel> _services = [];
+  ServiceModel? _selectedService;
   bool _isLoadingData = true;
 
   DateTime _selectedDay = DateTime.now();
@@ -43,7 +43,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _loadServices() async {
     try {
-      final list = await api.getServices();
+      final list = await api.getServices(widget.barber.id);
       setState(() {
         _services = list;
         _isLoadingData = false;
@@ -306,7 +306,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   : null,
                                             ),
                                             child: Text(
-                                              "${service.title} - R\$ ${service.price}",
+                                              "${service.name} - R\$ ${service.price}",
                                               style: TextStyle(
                                                 color: isSelected
                                                     ? Colors.black

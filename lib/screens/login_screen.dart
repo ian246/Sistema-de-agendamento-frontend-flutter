@@ -5,6 +5,8 @@ import 'package:Bcorte/utils/app_constants.dart';
 import 'package:Bcorte/utils/theme.dart';
 import 'package:Bcorte/widgets/custom_text_field.dart';
 import 'package:Bcorte/widgets/primary_button.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPrefs
+import 'provider_home_screen.dart'; // Import ProviderHomeScreen
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -28,11 +30,23 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('userRole') ?? 'client';
+
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (role == 'provider') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ProviderHomeScreen()),
+          );
+        } else {
+          // Fallback or Client
+          print("Redirecting to HomeScreen (Role: $role)");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

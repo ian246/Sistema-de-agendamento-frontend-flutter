@@ -41,6 +41,12 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Precisamos acessar sua galeria para selecionar sua foto de perfil.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Precisamos acessar sua câmera para tirar sua foto de perfil.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Precisamos acessar seu microfone para vídeos.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>

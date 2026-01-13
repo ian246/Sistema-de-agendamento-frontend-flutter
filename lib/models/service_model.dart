@@ -1,27 +1,34 @@
-class BarberService {
+class ServiceModel {
   final String id;
-  final String title;
-  final String description;
+  final String name;
   final double price;
   final int duration;
+  final String? description;
 
-  BarberService({
+  ServiceModel({
     required this.id,
-    required this.title,
-    required this.description,
+    required this.name,
     required this.price,
     required this.duration,
+    this.description,
   });
 
-  // Fábrica que transforma o JSON do Node.js em Objeto Dart
-  factory BarberService.fromJson(Map<String, dynamic> json) {
-    return BarberService(
+  factory ServiceModel.fromJson(Map<String, dynamic> json) {
+    return ServiceModel(
       id: json['id'],
-      title: json['title'],
-      description: json['description'] ?? '',
-      // O tryParse protege caso o banco mande "50" (int) ou "50.00" (string)
-      price: double.tryParse(json['price'].toString()) ?? 0.0,
-      duration: int.tryParse(json['duration_minutes']?.toString() ?? '0') ?? 30,
+      name: json['name'],
+      price: (json['price'] as num).toDouble(),
+      duration: json['duration'],
+      description: json['description'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'price': price,
+      'duration': duration,
+      'description': description,
+    };
   }
 }

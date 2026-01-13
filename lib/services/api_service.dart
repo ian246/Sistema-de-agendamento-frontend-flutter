@@ -85,14 +85,24 @@ class ApiService {
   }
 
   // --- 2. BUSCAR SERVIÇOS (NOVO!) ---
-  Future<List<BarberService>> getServices() async {
+  Future<List<ServiceModel>> getServices(String providerId) async {
     try {
+      // Ajuste se o seu backend esperar /api/services?provider_id=XYZ
+      // ou /api/services/provider/XYZ
+      // Baseado no ProviderService que usa /api/services/me,
+      // vou assumir que existe um filtro público ou endpoint específico.
+      // Se não houver, vamos tentar query param:
       final response = await _dio.get(
         '/api/services',
-      ); // Chama sua rota GET /services
+        queryParameters: {'provider_id': providerId},
+      );
+
       List<dynamic> data = response.data;
-      return data.map((json) => BarberService.fromJson(json)).toList();
+      return data.map((json) => ServiceModel.fromJson(json)).toList();
     } catch (e) {
+      // Fallback: Se der 404, pode ser que a rota seja /api/services/provider/:id
+      // Mas vamos tentar logar o erro primeiro
+      print("Erro getServices: $e");
       throw Exception("Erro ao buscar serviços: $e");
     }
   }
