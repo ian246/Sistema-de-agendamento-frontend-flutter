@@ -48,6 +48,125 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showProfileImageDialog(BuildContext context, Barber barber) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header com nome e botão fechar
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (barber.salonName != null &&
+                            barber.salonName!.isNotEmpty)
+                          Text(
+                            barber.salonName!,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        Text(
+                          barber.name,
+                          style: TextStyle(
+                            color: barber.salonName != null
+                                ? AppColors.grey
+                                : AppColors.white,
+                            fontSize: barber.salonName != null ? 14 : 18,
+                            fontWeight: barber.salonName != null
+                                ? FontWeight.w500
+                                : FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: AppColors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Imagem
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 400),
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+                child: Image.network(
+                  barber.salonImageUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    color: AppColors.surface,
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 48,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,32 +316,50 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: barber.isBooked
-                                ? const LinearGradient(
-                                    colors: [
-                                      AppColors.primary,
-                                      Color(0xFF1FD89A),
-                                    ],
-                                  )
-                                : null,
-                            color: barber.isBooked
-                                ? null
-                                : AppColors.primary.withOpacity(0.2),
-                          ),
-                          child: CircleAvatar(
-                            radius: 32,
-                            backgroundColor: AppColors.background,
-                            child: Text(
-                              barber.name.isNotEmpty ? barber.name[0] : "?",
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                              ),
+                        GestureDetector(
+                          onTap:
+                              barber.salonImageUrl != null &&
+                                  barber.salonImageUrl!.isNotEmpty
+                              ? () => _showProfileImageDialog(context, barber)
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: barber.isBooked
+                                  ? const LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        Color(0xFF1FD89A),
+                                      ],
+                                    )
+                                  : null,
+                              color: barber.isBooked
+                                  ? null
+                                  : AppColors.primary.withOpacity(0.2),
+                            ),
+                            child: CircleAvatar(
+                              radius: 32,
+                              backgroundColor: AppColors.background,
+                              backgroundImage:
+                                  barber.salonImageUrl != null &&
+                                      barber.salonImageUrl!.isNotEmpty
+                                  ? NetworkImage(barber.salonImageUrl!)
+                                  : null,
+                              child:
+                                  barber.salonImageUrl == null ||
+                                      barber.salonImageUrl!.isEmpty
+                                  ? Text(
+                                      barber.name.isNotEmpty
+                                          ? barber.name[0]
+                                          : "?",
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 24,
+                                      ),
+                                    )
+                                  : null,
                             ),
                           ),
                         ),
@@ -232,33 +369,84 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Nome do Salão em destaque (se existir)
+                              if (barber.salonName != null &&
+                                  barber.salonName!.isNotEmpty)
+                                Text(
+                                  barber.salonName!,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              // Nome do profissional
                               Text(
                                 barber.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.white,
+                                style: TextStyle(
+                                  fontSize:
+                                      barber.salonName != null &&
+                                          barber.salonName!.isNotEmpty
+                                      ? 14
+                                      : 20,
+                                  fontWeight:
+                                      barber.salonName != null &&
+                                          barber.salonName!.isNotEmpty
+                                      ? FontWeight.w500
+                                      : FontWeight.bold,
+                                  color:
+                                      barber.salonName != null &&
+                                          barber.salonName!.isNotEmpty
+                                      ? AppColors.grey
+                                      : AppColors.white,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.content_cut,
-                                    size: 14,
-                                    color: AppColors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    barber.specialty,
-                                    style: const TextStyle(
-                                      fontSize: 14,
+                              // Endereço (se existir)
+                              if (barber.address != null &&
+                                  barber.address!.isNotEmpty)
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_outlined,
+                                      size: 14,
                                       color: AppColors.grey,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        barber.address!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.grey,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.content_cut,
+                                      size: 14,
+                                      color: AppColors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      barber.specialty,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: AppColors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),

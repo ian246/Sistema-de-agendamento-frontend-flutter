@@ -44,8 +44,6 @@ class ApiService {
       List<dynamic> data = response.data;
       return data.map((json) => Barber.fromJson(json)).toList();
     } on DioException catch (e) {
-      print("Erro ao buscar barbeiros: $e");
-
       // Mensagens de erro mais específicas
       if (e.type == DioExceptionType.connectionTimeout) {
         throw Exception(
@@ -80,7 +78,6 @@ class ApiService {
         );
       }
     } catch (e) {
-      print("Erro inesperado ao buscar barbeiros: $e");
       throw Exception("Erro inesperado: $e");
     }
   }
@@ -105,7 +102,6 @@ class ApiService {
       List<dynamic> data = response.data;
       return data.map((json) => ServiceModel.fromJson(json)).toList();
     } on DioException catch (e) {
-      print("Erro getServices: $e");
       if (e.response?.statusCode == 404) {
         throw Exception(
           "Nenhum serviço encontrado para este barbeiro/provider.",
@@ -113,18 +109,19 @@ class ApiService {
       }
       throw Exception("Erro ao buscar serviços: ${e.message}");
     } catch (e) {
-      print("Erro inesperado getServices: $e");
       throw Exception("Erro ao buscar serviços: $e");
     }
   }
 
-  // --- 3. CRIAR AGENDAMENTO (Atualizado com clientId dinâmico) ---
+  // --- 3. CRIAR AGENDAMENTO (Atualizado com descrição e foto de referência) ---
   Future<Map<String, dynamic>> createAppointment({
-    required String clientId, // <--- Agora pedimos o ID do cliente
+    required String clientId,
     required String providerId,
     required String serviceId,
     required DateTime date,
     required String time,
+    String? cutDescription,
+    String? referenceImageUrl,
   }) async {
     try {
       final timeParts = time.split(':');
@@ -139,15 +136,22 @@ class ApiService {
         minute,
       );
 
-      final response = await _dio.post(
-        '/api/appointments',
-        data: {
-          "client_id": clientId, // <--- Usa o ID real, não o fixo
-          "provider_id": providerId,
-          "service_id": serviceId,
-          "start_time": fullDateTime.toIso8601String(),
-        },
-      );
+      final Map<String, dynamic> data = {
+        "client_id": clientId,
+        "provider_id": providerId,
+        "service_id": serviceId,
+        "start_time": fullDateTime.toIso8601String(),
+      };
+
+      // Adiciona campos opcionais se preenchidos
+      if (cutDescription != null && cutDescription.isNotEmpty) {
+        data["cut_description"] = cutDescription;
+      }
+      if (referenceImageUrl != null && referenceImageUrl.isNotEmpty) {
+        data["reference_image_url"] = referenceImageUrl;
+      }
+
+      final response = await _dio.post('/api/appointments', data: data);
 
       return response.data;
     } on DioException catch (e) {
@@ -188,6 +192,51 @@ class ApiService {
       );
     } catch (e) {
       throw Exception("Erro ao criar serviço: $e");
+    }
+  }
+
+  // --- 6. BUSCAR HORÁRIOS OCUPADOS DO PROVIDER ---
+  Future<List<String>> getProviderBusySlots(
+    String providerId,
+    DateTime date,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+
+      final options = Options(headers: {'Authorization': 'Bearer $token'});
+
+      // Formata a data para YYYY-MM-DD
+      final dateStr =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+      final response = await _dio.get(
+        '/api/appointments/provider/$providerId/date/$dateStr',
+        options: options,
+      );
+
+      List<dynamic> appointments = response.data;
+      List<String> busySlots = [];
+
+      for (var apt in appointments) {
+        final startTimeStr = apt['start_time'] ?? '';
+        final startTime = DateTime.tryParse(startTimeStr);
+        if (startTime != null) {
+          // Usa o horário direto sem conversão (já está em local)
+          final formattedTime =
+              "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}";
+          busySlots.add(formattedTime);
+        }
+      }
+
+      return busySlots;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return [];
+      }
+      return [];
+    } catch (e) {
+      return [];
     }
   }
 }
