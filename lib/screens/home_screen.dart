@@ -9,6 +9,8 @@ import 'login_screen.dart';
 import 'appointments_screen.dart';
 import 'profile_screen.dart';
 
+import '../models/appointment_models.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -18,11 +20,77 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService api = ApiService();
   late Future<List<Barber>> _barbersFuture;
+  String _userId = '';
+  Future<List<Appointment>>? _appointmentsFuture;
 
   @override
   void initState() {
     super.initState();
     _loadBarbers();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('userId') ?? '';
+      if (_userId.isNotEmpty) {
+        _appointmentsFuture = api.getMyAppointments(_userId);
+        _checkConfirmedAppointments();
+      }
+    });
+  }
+
+  Future<void> _checkConfirmedAppointments() async {
+    try {
+      final appointments = await api.getMyAppointments(_userId);
+      final prefs = await SharedPreferences.getInstance();
+      final notifiedIds = prefs.getStringList('notified_confirmed_ids') ?? [];
+
+      // Filtra agendamentos confirmados, futuros e que ainda não foram notificados
+      final newConfirmed = appointments.where((a) {
+        final isConfirmed = a.status.toLowerCase() == 'confirmed' ||
+            a.status.toLowerCase() == 'confirmado';
+        final isNot notifiedIds.contains(a.id);
+        return isConfirmed && !a.isPast && !notifiedIds.contains(a.id);
+      }).toList();
+
+      if (newConfirmed.isNotEmpty && mounted) {
+        // Pega o primeiro para notificar (ou poderia ser uma lista)
+        final appointment = newConfirmed.first;
+        
+        // Atualiza a lista de notificados
+        notifiedIds.add(appointment.id);
+        await prefs.setStringList('notified_confirmed_ids', notifiedIds);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Seu agendamento com ${appointment.barber.name} foi confirmado!"),
+            backgroundColor: const Color(0xFF22C55E), // Green
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Ver Mais',
+              textColor: Colors.white,
+              onPressed: () {
+                if (!mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AppointmentsScreen(
+                      highlightedAppointmentId: appointment.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Falha silenciosa na notificação para não travar o app
+      debugPrint("Erro ao verificar notificações: $e");
+    }
   }
 
   void _loadBarbers() {
@@ -37,14 +105,36 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (context) => BookingScreen(barber: barber)),
     );
 
+    if (!mounted) return;
+
     if (result != null && result is Map && result['booked'] == true) {
+      // Simula o ID do novo agendamento (em produção viria do backend)
+      final newAppointmentId = result['appointmentId']?.toString() ?? '1';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Agendamento solicitado para ${result['time']}!"),
-          backgroundColor: AppColors.primary,
+          backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Ver Mais',
+            textColor: Colors.white,
+            onPressed: () {
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AppointmentsScreen(
+                    highlightedAppointmentId: newAppointmentId,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       );
+      // Recarrega contagem
+      _loadUserData();
     }
   }
 
@@ -170,7 +260,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Escolha seu Profissional")),
+      appBar: AppBar(
+        title: const Text("Escolha seu Profissional"),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: FutureBuilder<List<Appointment>>(
+              future: _appointmentsFuture,
+              builder: (context, snapshot) {
+                int activeCount = 0;
+                if (snapshot.hasData) {
+                  activeCount = snapshot.data!
+                      .where(
+                        (a) =>
+                            !a.isPast &&
+                            a.status.toLowerCase() != 'cancelled' &&
+                            a.status.toLowerCase() != 'cancelado',
+                      )
+                      .length;
+                }
+                return Badge(
+                  label: Text('$activeCount'),
+                  isLabelVisible: activeCount > 0,
+                  child: const Icon(Icons.menu),
+                );
+              },
+            ),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
       drawer: const _CustomDrawer(),
       body: FutureBuilder<List<Barber>>(
         future: _barbersFuture,
@@ -526,6 +644,9 @@ class _CustomDrawerState extends State<_CustomDrawer> {
   String _userName = 'Cliente';
   String _userEmail = 'Email não disponível';
   bool _isLoading = true;
+  String _userId = '';
+  Future<List<dynamic>>? _appointmentsFuture;
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -538,7 +659,12 @@ class _CustomDrawerState extends State<_CustomDrawer> {
     setState(() {
       _userName = prefs.getString('userName') ?? 'Cliente';
       _userEmail = prefs.getString('userEmail') ?? 'Email não disponível';
+      _userId = prefs.getString('userId') ?? '';
       _isLoading = false;
+
+      if (_userId.isNotEmpty) {
+        _appointmentsFuture = _apiService.getMyAppointments(_userId);
+      }
     });
   }
 
@@ -600,7 +726,20 @@ class _CustomDrawerState extends State<_CustomDrawer> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.history, color: AppColors.white),
+            leading: FutureBuilder<List<dynamic>>(
+              future: _appointmentsFuture,
+              builder: (context, snapshot) {
+                int activeCount = 0;
+                if (snapshot.hasData) {
+                  activeCount = snapshot.data!.where((a) => !a.isPast).length;
+                }
+                return Badge(
+                  label: Text('$activeCount'),
+                  isLabelVisible: activeCount > 0,
+                  child: const Icon(Icons.history, color: AppColors.white),
+                );
+              },
+            ),
             title: const Text(
               "Meus Agendamentos",
               style: TextStyle(color: AppColors.white),

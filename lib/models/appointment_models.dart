@@ -9,6 +9,8 @@ class Appointment {
   final double price;
   final String location;
   final bool isPast;
+  final String status;
+  final String? cancellationReason;
 
   Appointment({
     required this.id,
@@ -19,6 +21,8 @@ class Appointment {
     required this.price,
     required this.location,
     required this.isPast,
+    required this.status,
+    this.cancellationReason,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
@@ -27,7 +31,7 @@ class Appointment {
     final serviceData = json['service'] ?? {};
 
     return Appointment(
-      id: json['id'],
+      id: json['id'].toString(),
       barber: Barber(
         id: json['provider_id'],
 
@@ -40,6 +44,8 @@ class Appointment {
       price: (json['price'] as num).toDouble(),
       location: "Unidade Principal",
       isPast: fullDate.isBefore(DateTime.now()),
+      status: json['status'] ?? 'pending',
+      cancellationReason: json['cancellation_reason'],
     );
   }
 }

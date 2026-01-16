@@ -100,6 +100,29 @@ class ProviderService {
     }
   }
 
+  // Atualizar status do agendamento
+  Future<void> updateAppointmentStatus(
+    String id,
+    String status, {
+    String? cancellationReason,
+  }) async {
+    final headers = await _getHeaders();
+    final bodyData = <String, dynamic>{'status': status};
+    if (cancellationReason != null) {
+      bodyData['cancellation_reason'] = cancellationReason;
+    }
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/appointments/$id/status'),
+      headers: headers,
+      body: jsonEncode(bodyData),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Erro ao atualizar status: ${response.body}');
+    }
+  }
+
   // ========== SERVICES METHODS ==========
 
   // 1. Listar Meus Serviços

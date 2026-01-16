@@ -109,7 +109,7 @@ class _BookingScreenState extends State<BookingScreen> {
       final userId = prefs.getString('userId');
       if (userId == null) throw Exception("Usuário não logado");
 
-      await api.createAppointment(
+      final result = await api.createAppointment(
         clientId: userId,
         providerId: widget.barber.id,
         serviceId: _selectedService!.id,
@@ -122,7 +122,11 @@ class _BookingScreenState extends State<BookingScreen> {
       );
 
       if (mounted) {
-        Navigator.pop(context, {'booked': true, 'time': _selectedTime});
+        Navigator.pop(context, {
+          'booked': true,
+          'time': _selectedTime,
+          'appointmentId': result['id'],
+        });
       }
     } catch (e) {
       if (mounted) {

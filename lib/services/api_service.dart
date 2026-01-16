@@ -239,4 +239,26 @@ class ApiService {
       return [];
     }
   }
+
+  // --- 7. CANCELAR AGENDAMENTO (CLIENTE) ---
+  Future<void> cancelAppointment(String appointmentId, String reason) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+
+      final options = Options(headers: {'Authorization': 'Bearer $token'});
+
+      final response = await _dio.patch(
+        '/api/appointments/$appointmentId/status',
+        data: {"status": "cancelled", "cancellation_reason": reason},
+        options: options,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception("Falha ao cancelar agendamento: ${response.data}");
+      }
+    } on DioException catch (e) {
+      throw Exception("Erro ao cancelar: ${e.response?.data ?? e.message}");
+    }
+  }
 }

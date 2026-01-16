@@ -30,7 +30,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController!.addListener(() {
       setState(() {
         _currentTabIndex = _tabController!.index;
@@ -285,6 +285,60 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
                   label: 'Email',
                   value: client['email'] ?? 'Não informado',
                 ),
+                // --- MOTIVO DO CANCELAMENTO (SE CANCELADO) ---
+                if ((appointment['status']?.toLowerCase() == 'cancelled' ||
+                        appointment['status']?.toLowerCase() == 'cancelado') &&
+                    appointment['cancellation_reason'] != null &&
+                    (appointment['cancellation_reason'] as String)
+                        .isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  const Divider(color: AppColors.grey),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.cancel_outlined,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Motivo do cancelamento:',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      appointment['cancellation_reason'],
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+
                 // --- DESCRIÇÃO DO CORTE ---
                 if (appointment['cut_description'] != null &&
                     (appointment['cut_description'] as String).isNotEmpty) ...[
@@ -415,6 +469,30 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
                   ),
                 ],
                 const SizedBox(height: 24),
+
+                // Botão de Cancelar para agendamentos confirmados ou pendentes
+                if (appointment['status']?.toLowerCase() != 'cancelled' &&
+                    appointment['status']?.toLowerCase() != 'cancelado')
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showCancellationOptionsDialog(appointment['id']);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('Cancelar Agendamento'),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -627,9 +705,36 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
               indicatorWeight: 3,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.grey,
-              tabs: const [
-                Tab(icon: Icon(Icons.calendar_today), text: 'Agenda'),
-                Tab(icon: Icon(Icons.content_cut), text: 'Serviços'),
+              tabs: [
+                Tab(
+                  icon: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _appointmentsFuture,
+                    builder: (context, snapshot) {
+                      int pendingCount = 0;
+                      if (snapshot.hasData) {
+                        pendingCount = snapshot.data!
+                            .where(
+                              (a) =>
+                                  a['status']?.toLowerCase() == 'pending' ||
+                                  a['status']?.toLowerCase() == 'pendente',
+                            )
+                            .length;
+                      }
+                      return Badge(
+                        label: Text('$pendingCount'),
+                        isLabelVisible: pendingCount > 0,
+                        backgroundColor: Colors.red,
+                        child: const Icon(Icons.calendar_today),
+                      );
+                    },
+                  ),
+                  text: 'Agenda',
+                ),
+                const Tab(icon: Icon(Icons.content_cut), text: 'Serviços'),
+                const Tab(
+                  icon: Icon(Icons.cancel_presentation),
+                  text: 'Cancelados',
+                ),
               ],
             ),
           ),
@@ -638,9 +743,11 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
           controller: _tabController,
           children: [
             // Tab Agenda
-            _buildAgendaTab(),
+            _buildAgendaTab(showCancelled: false),
             // Tab Serviços
             _buildServicesTab(),
+            // Tab Cancelados
+            _buildAgendaTab(showCancelled: true),
           ],
         ),
       ),
@@ -676,7 +783,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
     );
   }
 
-  Widget _buildAgendaTab() {
+  Widget _buildAgendaTab({required bool showCancelled}) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _appointmentsFuture,
       builder: (context, snapshot) {
@@ -708,7 +815,14 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
           );
         }
 
-        final appointments = snapshot.data ?? [];
+        final allAppointments = snapshot.data ?? [];
+
+        // Filtra baseado na aba (Show Cancelled or Not)
+        final appointments = allAppointments.where((apt) {
+          final status = apt['status']?.toLowerCase() ?? '';
+          final isCancelled = status == 'cancelled' || status == 'cancelado';
+          return showCancelled ? isCancelled : !isCancelled;
+        }).toList();
 
         if (appointments.isEmpty) {
           return Center(
@@ -810,6 +924,168 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
     );
   }
 
+  Future<void> _updateAppointmentStatus(
+    String id,
+    String status, {
+    String? cancellationReason,
+  }) async {
+    try {
+      await _providerService.updateAppointmentStatus(
+        id,
+        status,
+        cancellationReason: cancellationReason,
+      );
+      _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              status == 'confirmed'
+                  ? 'Agendamento confirmado!'
+                  : 'Agendamento recusado',
+            ),
+            backgroundColor: status == 'confirmed' ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _showCancellationOptionsDialog(String appointmentId) {
+    final reasonController = TextEditingController();
+    String selectedReason = '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          final options = [
+            'Imprevisto pessoal',
+            'Cliente desistiu',
+            'Cliente não compareceu',
+            'Outro',
+          ];
+
+          return AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: const Text(
+              'Cancelar Agendamento',
+              style: TextStyle(color: AppColors.white),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Selecione o motivo:',
+                  style: TextStyle(color: AppColors.grey),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: options.map((option) {
+                    final isSelected = selectedReason == option;
+                    return ChoiceChip(
+                      label: Text(option),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedReason = selected ? option : '';
+                          if (option != 'Outro') {
+                            reasonController.text = option;
+                          } else {
+                            reasonController.text = '';
+                          }
+                        });
+                      },
+                      selectedColor: Colors.red.withOpacity(0.2),
+                      backgroundColor: AppColors.background,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.red : AppColors.grey,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected ? Colors.red : Colors.transparent,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                if (selectedReason == 'Outro' ||
+                    (selectedReason.isNotEmpty &&
+                        !options.contains(selectedReason))) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reasonController,
+                    style: const TextStyle(color: AppColors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Digite o motivo...',
+                      hintStyle: TextStyle(
+                        color: AppColors.grey.withOpacity(0.5),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Voltar',
+                  style: TextStyle(color: AppColors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final reason = reasonController.text.trim();
+                  if (reason.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Por favor, informe um motivo.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  _updateAppointmentStatus(
+                    appointmentId,
+                    'cancelled',
+                    cancellationReason: reason,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Confirmar Cancelamento'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildAppointmentCard(Map<String, dynamic> appointment) {
     final client = appointment['client'] ?? {};
     final service = appointment['service'] ?? {};
@@ -819,6 +1095,10 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
     final timeString = startTime != null
         ? '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
         : '--:--';
+
+    final isPending =
+        (status?.toLowerCase() == 'pending' ||
+        status?.toLowerCase() == 'pendente');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -844,143 +1124,189 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                // Horário
-                Container(
-                  width: 60,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary.withOpacity(0.2),
-                        AppColors.primary.withOpacity(0.05),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                Row(
+                  children: [
+                    // Horário
+                    Container(
+                      width: 60,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary.withOpacity(0.2),
+                            AppColors.primary.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            timeString,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
+                    const SizedBox(width: 16),
+                    // Info do cliente
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppColors.primary.withOpacity(
+                                  0.2,
+                                ),
+                                child: Text(
+                                  (client['full_name'] ?? 'C')[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      client['full_name'] ?? 'Cliente',
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.content_cut,
+                                          size: 12,
+                                          color: AppColors.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            service['title'] ??
+                                                service['name'] ??
+                                                'Serviço',
+                                            style: const TextStyle(
+                                              color: AppColors.grey,
+                                              fontSize: 13,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Status
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(status).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getStatusIcon(status),
+                                size: 14,
+                                color: _getStatusColor(status),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _getStatusLabel(status),
+                                style: TextStyle(
+                                  color: _getStatusColor(status),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isPending) ...[
+                          const SizedBox(height: 8),
+                          Icon(
+                            Icons.chevron_right,
+                            color: AppColors.grey.withOpacity(0.5),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                if (isPending) ...[
+                  const SizedBox(height: 16),
+                  Row(
                     children: [
-                      Text(
-                        timeString,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              _showCancellationOptionsDialog(appointment['id']),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Recusar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _updateAppointmentStatus(
+                            appointment['id'],
+                            'confirmed',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Aceitar'),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                // Info do cliente
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: AppColors.primary.withOpacity(0.2),
-                            child: Text(
-                              (client['full_name'] ?? 'C')[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  client['full_name'] ?? 'Cliente',
-                                  style: const TextStyle(
-                                    color: AppColors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.content_cut,
-                                      size: 12,
-                                      color: AppColors.grey,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        service['title'] ??
-                                            service['name'] ??
-                                            'Serviço',
-                                        style: const TextStyle(
-                                          color: AppColors.grey,
-                                          fontSize: 13,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Status
-                Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getStatusIcon(status),
-                            size: 14,
-                            color: _getStatusColor(status),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _getStatusLabel(status),
-                            style: TextStyle(
-                              color: _getStatusColor(status),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Icon(
-                      Icons.chevron_right,
-                      color: AppColors.grey.withOpacity(0.5),
-                    ),
-                  ],
-                ),
+                ],
               ],
             ),
           ),
