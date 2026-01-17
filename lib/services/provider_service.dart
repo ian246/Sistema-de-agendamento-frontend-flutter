@@ -183,7 +183,12 @@ class ProviderService {
 
     final response = await http.delete(Uri.parse(url), headers: headers);
 
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      return;
+    } else if (response.statusCode == 400) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Erro ao deletar serviço');
+    } else {
       throw Exception('Erro ao deletar serviço: ${response.body}');
     }
   }

@@ -66,8 +66,20 @@ class _BookingScreenState extends State<BookingScreen> {
     } catch (e) {
       setState(() => _isLoadingData = false);
       if (mounted) {
+        String message = "Erro ao carregar serviços. Tente novamente.";
+        Color color = Colors.red;
+
+        if (e.toString().contains("403")) {
+          message = "Este profissional ainda não cadastrou nenhum serviço.";
+          color = Colors.orange;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao carregar serviços: $e")),
+          SnackBar(
+            content: Text(message),
+            backgroundColor: color,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
@@ -208,13 +220,16 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Icon(icon, color: AppColors.primary, size: 22),
           ),
           const SizedBox(width: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -1047,11 +1062,14 @@ class _BookingScreenState extends State<BookingScreen> {
                                       size: 18,
                                     ),
                                     const SizedBox(width: 8),
-                                    const Text(
-                                      "Foto adicionada com sucesso!",
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
+                                    const Expanded(
+                                      child: Text(
+                                        "Foto adicionada com sucesso!",
+                                        style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
@@ -1084,11 +1102,14 @@ class _BookingScreenState extends State<BookingScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Total Estimado:",
-                            style: TextStyle(
-                              color: AppColors.grey,
-                              fontSize: 16,
+                          const Expanded(
+                            child: Text(
+                              "Total Estimado:",
+                              style: TextStyle(
+                                color: AppColors.grey,
+                                fontSize: 16,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           AnimatedSwitcher(

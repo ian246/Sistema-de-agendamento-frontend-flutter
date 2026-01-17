@@ -49,23 +49,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Filtra agendamentos confirmados, futuros e que ainda não foram notificados
       final newConfirmed = appointments.where((a) {
-        final isConfirmed = a.status.toLowerCase() == 'confirmed' ||
+        final isConfirmed =
+            a.status.toLowerCase() == 'confirmed' ||
             a.status.toLowerCase() == 'confirmado';
-        final isNot notifiedIds.contains(a.id);
-        return isConfirmed && !a.isPast && !notifiedIds.contains(a.id);
+        final isNotNotified = !notifiedIds.contains(a.id);
+        return isConfirmed && !a.isPast && isNotNotified;
       }).toList();
 
       if (newConfirmed.isNotEmpty && mounted) {
         // Pega o primeiro para notificar (ou poderia ser uma lista)
         final appointment = newConfirmed.first;
-        
+
         // Atualiza a lista de notificados
         notifiedIds.add(appointment.id);
         await prefs.setStringList('notified_confirmed_ids', notifiedIds);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Seu agendamento com ${appointment.barber.name} foi confirmado!"),
+            content: Text(
+              "Seu agendamento com ${appointment.barber.name} foi confirmado!",
+            ),
             backgroundColor: const Color(0xFF22C55E), // Green
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 6),

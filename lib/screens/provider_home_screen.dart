@@ -82,10 +82,22 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
       }
     } catch (e) {
       if (mounted) {
+        String message = e.toString().replaceAll('Exception: ', '');
+
+        // Improve checking for specific backend errors
+        if (message.contains('foreign key constraint') ||
+            message.contains('appointments_service_id_fkey')) {
+          message =
+              'Não é possível excluir um serviço que possui agendamentos associados.';
+        } else if (message.contains('update or delete on table')) {
+          message = 'Não é possível excluir este serviço no momento.';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao deletar: $e'),
+            content: Text(message),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -1458,6 +1470,42 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(width: 12),
+                        // Use Flexible to prevent overflow
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '${service.appointmentCount} agendamentos',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
