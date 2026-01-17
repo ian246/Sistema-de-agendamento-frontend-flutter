@@ -645,7 +645,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Olá, $_providerName! 👋',
+                                    _providerName,
                                     style: const TextStyle(
                                       color: AppColors.white,
                                       fontSize: 22,
@@ -1328,8 +1328,11 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
   }
 
   Widget _buildServicesTab() {
-    return FutureBuilder<List<ServiceModel>>(
-      future: _servicesFuture,
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        _servicesFuture ?? Future.value([]),
+        _appointmentsFuture ?? Future.value([]),
+      ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -1354,7 +1357,11 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        final services = snapshot.data?[0] as List<ServiceModel>? ?? [];
+        final appointments =
+            snapshot.data?[1] as List<Map<String, dynamic>>? ?? [];
+
+        if (services.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1384,7 +1391,28 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
           );
         }
 
-        final services = snapshot.data!;
+        // Calcula contagem de agendamentos não cancelados por serviço
+        final appointmentCounts = <String, int>{};
+        for (final apt in appointments) {
+          final status = apt['status']?.toLowerCase() ?? '';
+          if (status != 'cancelled' && status != 'cancelado') {
+            final serviceData = apt['service'];
+            // Verifica se service é Map ou ID diretamente (dependendo da resposta da API)
+            String? serviceId;
+            if (serviceData is Map) {
+              serviceId = serviceData['id']?.toString();
+            } else if (serviceData is String) {
+              serviceId = serviceData;
+            } else if (serviceData is int) {
+              serviceId = serviceData.toString();
+            }
+
+            if (serviceId != null) {
+              appointmentCounts[serviceId] =
+                  (appointmentCounts[serviceId] ?? 0) + 1;
+            }
+          }
+        }
 
         return RefreshIndicator(
           onRefresh: () async => _loadData(),
@@ -1394,6 +1422,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
             itemCount: services.length,
             itemBuilder: (context, index) {
               final service = services[index];
+              final count = appointmentCounts[service.id] ?? 0;
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
@@ -1494,7 +1524,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen>
                                 const SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
-                                    '${service.appointmentCount} agendamentos',
+                                    '$count agendamentos',
                                     style: const TextStyle(
                                       color: Colors.blue,
                                       fontSize: 12,

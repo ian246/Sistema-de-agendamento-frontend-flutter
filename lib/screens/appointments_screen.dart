@@ -14,15 +14,24 @@ class AppointmentsScreen extends StatefulWidget {
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
 }
 
-class _AppointmentsScreenState extends State<AppointmentsScreen> {
+class _AppointmentsScreenState extends State<AppointmentsScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService api = ApiService();
   Future<List<Appointment>>? _appointmentsFuture;
   String? myClientId;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadUserId();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   // Carrega o userId do SharedPreferences
@@ -46,91 +55,152 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     });
   }
 
+  void _checkHighlightedAppointment(List<Appointment> allAppointments) {
+    if (widget.highlightedAppointmentId == null) return;
+
+    try {
+      final target = allAppointments.firstWhere(
+        (a) => a.id.toString() == widget.highlightedAppointmentId,
+      );
+
+      // Determina a aba correta baseado no status/data
+      int targetIndex = 0;
+      final status = target.status.toLowerCase();
+      Color snackColor = AppColors.primary;
+      String snackMessage = "Agendamento atualizado!"; // Default
+
+      if (status == 'cancelled' || status == 'cancelado') {
+        targetIndex = 1; // Aba Cancelados
+        snackColor = Colors.red;
+        snackMessage = "Este agendamento foi cancelado pelo profissional.";
+      } else if (target.isPast) {
+        targetIndex = 2; // Aba Histórico
+      } else {
+        targetIndex = 0; // Aba Ativos
+        if (status == 'confirmed' || status == 'confirmado') {
+          snackColor = Colors.green;
+          snackMessage = "Agendamento confirmado com sucesso!";
+        }
+      }
+
+      // Muda para a aba correta se necessário
+      if (_tabController.index != targetIndex) {
+        // Pequeno delay para garantir que a UI foi construída
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _tabController.animateTo(targetIndex);
+          }
+        });
+      }
+
+      // Mostrar SnackBar
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(snackMessage),
+              backgroundColor: snackColor,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      // Agendamento não encontrado na lista, ignora
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Meus Agendamentos"),
-          bottom: const TabBar(
-            indicatorColor: AppColors.primary,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.grey,
-            tabs: [
-              Tab(text: "Ativos"),
-              Tab(text: "Cancelados"),
-              Tab(text: "Histórico"),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Meus Agendamentos"),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.primary,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.grey,
+          tabs: const [
+            Tab(text: "Ativos"),
+            Tab(text: "Cancelados"),
+            Tab(text: "Histórico"),
+          ],
         ),
-        body: _appointmentsFuture == null
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
-            : FutureBuilder<List<Appointment>>(
-                future: _appointmentsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    );
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        "Erro: ${snapshot.error}",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    );
-                  }
-
-                  final list = snapshot.data ?? [];
-
-                  // Ordena por data (mais próximo primeiro)
-                  list.sort((a, b) => a.date.compareTo(b.date));
-
-                  // Filtros
-                  final cancelled = list
-                      .where(
-                        (a) =>
-                            a.status.toLowerCase() == 'cancelled' ||
-                            a.status.toLowerCase() == 'cancelado',
-                      )
-                      .toList();
-
-                  final past = list
-                      .where(
-                        (a) =>
-                            a.isPast &&
-                            a.status.toLowerCase() != 'cancelled' &&
-                            a.status.toLowerCase() != 'cancelado',
-                      )
-                      .toList();
-
-                  // Ativos (Futuros e não cancelados)
-                  final active = list
-                      .where(
-                        (a) =>
-                            !a.isPast &&
-                            a.status.toLowerCase() != 'cancelled' &&
-                            a.status.toLowerCase() != 'cancelado',
-                      )
-                      .toList();
-
-                  return TabBarView(
-                    children: [
-                      _buildActiveTab(active),
-                      _buildList(cancelled, "Nenhum agendamento cancelado."),
-                      _buildList(past, "Histórico vazio."),
-                    ],
-                  );
-                },
-              ),
       ),
+      body: _appointmentsFuture == null
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
+          : FutureBuilder<List<Appointment>>(
+              future: _appointmentsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      "Erro: ${snapshot.error}",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
+
+                final list = snapshot.data ?? [];
+
+                // Verifica navegação automática (apenas uma vez após carregar)
+                if (widget.highlightedAppointmentId != null &&
+                    snapshot.connectionState == ConnectionState.done) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _checkHighlightedAppointment(list);
+                  });
+                }
+
+                // Ordena por data (mais próximo primeiro)
+                list.sort((a, b) => a.date.compareTo(b.date));
+
+                // Filtros
+                final cancelled = list
+                    .where(
+                      (a) =>
+                          a.status.toLowerCase() == 'cancelled' ||
+                          a.status.toLowerCase() == 'cancelado',
+                    )
+                    .toList();
+
+                final past = list
+                    .where(
+                      (a) =>
+                          a.isPast &&
+                          a.status.toLowerCase() != 'cancelled' &&
+                          a.status.toLowerCase() != 'cancelado',
+                    )
+                    .toList();
+
+                // Ativos (Futuros e não cancelados)
+                final active = list
+                    .where(
+                      (a) =>
+                          !a.isPast &&
+                          a.status.toLowerCase() != 'cancelled' &&
+                          a.status.toLowerCase() != 'cancelado',
+                    )
+                    .toList();
+
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildActiveTab(active),
+                    _buildList(cancelled, "Nenhum agendamento cancelado."),
+                    _buildList(past, "Histórico vazio."),
+                  ],
+                );
+              },
+            ),
     );
   }
 
@@ -253,6 +323,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       itemBuilder: (context, index) => AppointmentCard(
         appointment: list[index],
         onUpdate: _loadAppointments,
+        isHighlighted:
+            list[index].id.toString() == widget.highlightedAppointmentId,
       ),
     );
   }

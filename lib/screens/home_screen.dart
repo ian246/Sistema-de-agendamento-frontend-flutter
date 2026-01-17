@@ -36,18 +36,18 @@ class _HomeScreenState extends State<HomeScreen> {
       _userId = prefs.getString('userId') ?? '';
       if (_userId.isNotEmpty) {
         _appointmentsFuture = api.getMyAppointments(_userId);
-        _checkConfirmedAppointments();
+        _checkAppointmentUpdates();
       }
     });
   }
 
-  Future<void> _checkConfirmedAppointments() async {
+  Future<void> _checkAppointmentUpdates() async {
     try {
       final appointments = await api.getMyAppointments(_userId);
       final prefs = await SharedPreferences.getInstance();
-      final notifiedIds = prefs.getStringList('notified_confirmed_ids') ?? [];
+      final notifiedIds = prefs.getStringList('notified_ids') ?? [];
 
-      // Filtra agendamentos confirmados, futuros e que ainda não foram notificados
+      // Verifica confirmações
       final newConfirmed = appointments.where((a) {
         final isConfirmed =
             a.status.toLowerCase() == 'confirmed' ||
@@ -56,42 +56,84 @@ class _HomeScreenState extends State<HomeScreen> {
         return isConfirmed && !a.isPast && isNotNotified;
       }).toList();
 
-      if (newConfirmed.isNotEmpty && mounted) {
-        // Pega o primeiro para notificar (ou poderia ser uma lista)
-        final appointment = newConfirmed.first;
+      // Verifica cancelamentos
+      final newCancelled = appointments.where((a) {
+        final isCancelled =
+            a.status.toLowerCase() == 'cancelled' ||
+            a.status.toLowerCase() == 'cancelado';
+        final isNotNotified = !notifiedIds.contains(a.id);
+        // Notifica mesmo se for "past" (passado), pois o usuário precisa saber que foi cancelado
+        return isCancelled && isNotNotified;
+      }).toList();
 
-        // Atualiza a lista de notificados
-        notifiedIds.add(appointment.id);
-        await prefs.setStringList('notified_confirmed_ids', notifiedIds);
+      if (mounted) {
+        // Prioridade para Cancelamentos (mais urgente)
+        if (newCancelled.isNotEmpty) {
+          final appointment = newCancelled.first;
+          notifiedIds.add(appointment.id);
+          await prefs.setStringList('notified_ids', notifiedIds);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Seu agendamento com ${appointment.barber.name} foi confirmado!",
-            ),
-            backgroundColor: const Color(0xFF22C55E), // Green
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: 'Ver Mais',
-              textColor: Colors.white,
-              onPressed: () {
-                if (!mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AppointmentsScreen(
-                      highlightedAppointmentId: appointment.id,
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Agendamento com ${appointment.barber.name} foi CANCELADO.",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: 'Ver Detalhes',
+                textColor: Colors.white,
+                onPressed: () {
+                  if (!mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AppointmentsScreen(
+                        highlightedAppointmentId: appointment.id,
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
+        }
+        // Se não tiver cancelamento, mostra confirmação
+        else if (newConfirmed.isNotEmpty) {
+          final appointment = newConfirmed.first;
+          notifiedIds.add(appointment.id);
+          await prefs.setStringList('notified_ids', notifiedIds);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Seu agendamento com ${appointment.barber.name} foi confirmado!",
+              ),
+              backgroundColor: const Color(0xFF22C55E), // Green
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+              action: SnackBarAction(
+                label: 'Ver Mais',
+                textColor: Colors.white,
+                onPressed: () {
+                  if (!mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AppointmentsScreen(
+                        highlightedAppointmentId: appointment.id,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
-      // Falha silenciosa na notificação para não travar o app
       debugPrint("Erro ao verificar notificações: $e");
     }
   }
